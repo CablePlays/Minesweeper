@@ -1,23 +1,24 @@
 package me.cable.minesweeper;
 
-import me.cable.minesweeper.util.Utils;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@SuppressWarnings("unused")
 public abstract class Minesweeper {
 
-    private final int gridSize;
-    private final double bombChance;
+    public final int gridSize;
+    public final double bombChance;
+
     private final Tile[][] tiles;
     private int remainingTiles;
     private boolean gameOver;
 
     public Minesweeper(int gridSize, double bombChance) {
+        tiles = new Tile[gridSize][gridSize];
         this.gridSize = gridSize;
         this.bombChance = bombChance;
-        tiles = new Tile[gridSize][gridSize];
         createTiles();
     }
 
@@ -27,7 +28,8 @@ public abstract class Minesweeper {
 
         for (int x = 0; x < gridSize; x++) {
             for (int y = 0; y < gridSize; y++) {
-                makeDefault(x, y);
+                Tile tile = getTile(x, y);
+                changeTile(tile, TileState.COVERED);
             }
         }
     }
@@ -88,13 +90,16 @@ public abstract class Minesweeper {
         if (tile.isDiscovered() || tile.isFlagged()) return;
 
         if (tile.isBomb()) {
-            gameLose(x, y);
             gameOver = true;
+            changeTile(tile, TileState.LOSE);
+            onLose();
 
             for (int xa = 0; xa < gridSize; xa++) {
                 for (int ya = 0; ya < gridSize; ya++) {
-                    if (getTile(xa, ya).isBomb() && (xa != x || ya != y)) {
-                        makeBomb(xa, ya);
+                    Tile current = getTile(xa, ya);
+
+                    if (current.isBomb() && (xa != x || ya != y)) {
+                        changeTile(current, TileState.BOMB);
                     }
                 }
             }
@@ -103,18 +108,21 @@ public abstract class Minesweeper {
             int nearbyBombs = getNearbyBombs(tile);
 
             if (--remainingTiles <= 0 || nearbyBombs == 0 && uncoverAdjacentZeros(tile)) {
-                gameWin(x, y, nearbyBombs);
                 gameOver = true;
+                changeTile(tile, TileState.WIN);
+                onWin();
 
                 for (int xa = 0; xa < gridSize; xa++) {
                     for (int ya = 0; ya < gridSize; ya++) {
-                        if (getTile(xa, ya).isBomb()) {
-                            makeFlag(xa, ya);
+                        Tile current = getTile(xa, ya);
+
+                        if (current.isBomb()) {
+                            changeTile(current, TileState.FLAGGED);
                         }
                     }
                 }
             } else {
-                makeUncovered(x, y, nearbyBombs);
+                changeTile(tile, TileState.UNCOVERED);
             }
         }
     }
@@ -130,7 +138,7 @@ public abstract class Minesweeper {
 
             int nearbyBombs = getNearbyBombs(near);
             near.setDiscovered(true);
-            makeUncovered(near.getX(), near.getY(), nearbyBombs);
+            changeTile(near, TileState.UNCOVERED);
 
             if (--remainingTiles <= 0 || nearbyBombs == 0 && uncoverAdjacentZeros(near)) {
                 return true;
@@ -151,27 +159,29 @@ public abstract class Minesweeper {
         Tile tile = getTile(x, y);
         if (tile.isDiscovered()) return;
 
-        boolean newFlagState = !tile.isFlagged();
-        tile.setFlagged(newFlagState);
+        boolean nowFlagged = !tile.isFlagged();
+        tile.setFlagged(nowFlagged);
 
-        if (newFlagState) {
-            makeFlag(x, y);
+        if (nowFlagged) {
+            changeTile(tile, TileState.FLAGGED);
         } else {
-            makeDefault(x, y);
+            changeTile(tile, TileState.COVERED);
         }
     }
 
-    protected abstract void makeDefault(int x, int y);
+    private void changeTile(@NotNull Tile tile, @NotNull TileState tileState) {
+        changeTile(tile.getX(), tile.getY(), getNearbyBombs(tile), tileState);
+    }
 
-    protected abstract void makeUncovered(int x, int y, int n);
+    public abstract void changeTile(int x, int y, int nearbyBombs, @NotNull TileState tileState);
 
-    protected abstract void makeFlag(int x, int y);
+    protected void onLose() {
 
-    protected abstract void makeBomb(int x, int y);
+    }
 
-    protected abstract void gameLose(int x, int y);
+    protected void onWin() {
 
-    protected abstract void gameWin(int x, int y, int n);
+    }
 
     private @NotNull Tile getTile(int x, int y) {
         if (!Utils.inRange(0, gridSize - 1, x, y)) {

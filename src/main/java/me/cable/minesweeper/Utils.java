@@ -1,4 +1,4 @@
-package me.cable.minesweeper.util;
+package me.cable.minesweeper;
 
 public final class Utils {
 
