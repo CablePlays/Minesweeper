@@ -8,8 +8,8 @@ import java.util.List;
 @SuppressWarnings("unused")
 public abstract class Minesweeper {
 
-    public final int gridSize;
-    public final double bombChance;
+    private final int gridSize;
+    private final double bombChance;
 
     private final Tile[][] tiles;
     private int remainingTiles;
@@ -220,5 +220,13 @@ public abstract class Minesweeper {
         }
 
         return n;
+    }
+
+    public int getGridSize() {
+        return gridSize;
+    }
+
+    public double getBombChance() {
+        return bombChance;
     }
 }
